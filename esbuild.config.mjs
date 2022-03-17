@@ -1,6 +1,7 @@
 import esbuild from "esbuild";
 import process from "process";
-import builtins from 'builtin-modules'
+import builtins from 'builtin-modules';
+import { copy } from "esbuild-plugin-copy";
 
 const banner =
 `/*
@@ -11,7 +12,7 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = (process.argv[2] === 'production');
 
-esbuild.build({
+const baseConfig = {
 	banner: {
 		js: banner,
 	},
@@ -48,5 +49,29 @@ esbuild.build({
 	logLevel: "info",
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
+};
+
+const testVaultPluginFolder = 'test-vault/.obsidian/plugins/obsidian-sample-plugin/';
+const devConfig = {
+	...baseConfig,
+	outfile: testVaultPluginFolder + 'main.js',
+	plugins: [
+		copy({
+			resolveFrom: testVaultPluginFolder,
+			assets: [
+				{ from: ['manifest.json', 'styles.css'], to: ['.'] }
+			]
+		})
+	]
+};
+
+const prodConfig = {
+	...baseConfig,
 	outfile: 'main.js',
-}).catch(() => process.exit(1));
+};
+
+if (prod){
+	esbuild.build(prodConfig).catch(() => process.exit(1));
+} else {
+	esbuild.build(devConfig).catch(() => process.exit(1));
+}
